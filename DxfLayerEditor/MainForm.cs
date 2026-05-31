@@ -336,11 +336,34 @@ namespace DxfLayerEditor
             _outerSplit.Panel2.Controls.Add(_innerSplit);
             Controls.Add(_outerSplit);
 
-            // Set SplitterDistance AFTER controls are added to the form and sized
-            Load += (s, e) =>
+            // Set SplitterDistance in Shown event — the form is fully rendered and has valid dimensions.
+            // Load can still fire before layout is complete on some systems.
+            this.Shown += (s, e) =>
             {
-                _outerSplit.SplitterDistance = 250;
-                _innerSplit.SplitterDistance = _innerSplit.Width - 250;
+                try
+                {
+                    // Outer split: left panel = 250px, right panel = rest
+                    int outerMin = _outerSplit.Panel1MinSize + _outerSplit.Panel2MinSize + _outerSplit.SplitterWidth;
+                    if (_outerSplit.Width > outerMin)
+                    {
+                        int desired = Math.Min(250, _outerSplit.Width - _outerSplit.Panel2MinSize - _outerSplit.SplitterWidth);
+                        _outerSplit.SplitterDistance = Math.Max(_outerSplit.Panel1MinSize, desired);
+                    }
+
+                    // Inner split: right panel = 250px, viewport = rest
+                    // Parent (_outerSplit.Panel2) must already have valid width from the outer split above.
+                    int innerMin = _innerSplit.Panel1MinSize + _innerSplit.Panel2MinSize + _innerSplit.SplitterWidth;
+                    if (_innerSplit.Width > innerMin)
+                    {
+                        int rightPanelWidth = Math.Min(250, _innerSplit.Width - _innerSplit.Panel1MinSize - _innerSplit.SplitterWidth);
+                        int desired = _innerSplit.Width - rightPanelWidth - _innerSplit.SplitterWidth;
+                        _innerSplit.SplitterDistance = Math.Max(_innerSplit.Panel1MinSize, desired);
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    // Silently ignore — splitter will use default position
+                }
             };
         }
 
