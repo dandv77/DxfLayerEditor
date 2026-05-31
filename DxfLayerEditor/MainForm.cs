@@ -299,7 +299,6 @@ namespace DxfLayerEditor
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 250,
                 FixedPanel = FixedPanel.Panel1,
                 SplitterWidth = 3,
                 BackColor = Color.FromArgb(30, 30, 30),
@@ -337,9 +336,10 @@ namespace DxfLayerEditor
             _outerSplit.Panel2.Controls.Add(_innerSplit);
             Controls.Add(_outerSplit);
 
-            // Adjust splitter after layout
+            // Set SplitterDistance AFTER controls are added to the form and sized
             Load += (s, e) =>
             {
+                _outerSplit.SplitterDistance = 250;
                 _innerSplit.SplitterDistance = _innerSplit.Width - 250;
             };
         }
