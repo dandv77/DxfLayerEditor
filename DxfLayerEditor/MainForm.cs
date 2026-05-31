@@ -295,15 +295,16 @@ namespace DxfLayerEditor
         private void BuildLayout()
         {
             // Outer split: left panel | rest
+            // NOTE: Do NOT set Panel1MinSize, Panel2MinSize, or SplitterDistance in the
+            // object initializer — they trigger internal ApplyPanel*MinSize which adjusts
+            // SplitterDistance before the container has valid dimensions, causing a crash.
             _outerSplit = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
                 FixedPanel = FixedPanel.Panel1,
                 SplitterWidth = 3,
-                BackColor = Color.FromArgb(30, 30, 30),
-                Panel1MinSize = 200,
-                Panel2MinSize = 400
+                BackColor = Color.FromArgb(30, 30, 30)
             };
             _outerSplit.Panel1.BackColor = Color.FromArgb(37, 37, 38);
             _outerSplit.Panel2.BackColor = Color.FromArgb(30, 30, 30);
@@ -314,8 +315,7 @@ namespace DxfLayerEditor
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
                 SplitterWidth = 3,
-                BackColor = Color.FromArgb(30, 30, 30),
-                Panel2MinSize = 200
+                BackColor = Color.FromArgb(30, 30, 30)
             };
             _innerSplit.Panel1.BackColor = Color.FromArgb(30, 30, 30);
             _innerSplit.Panel2.BackColor = Color.FromArgb(37, 37, 38);
@@ -336,28 +336,29 @@ namespace DxfLayerEditor
             _outerSplit.Panel2.Controls.Add(_innerSplit);
             Controls.Add(_outerSplit);
 
-            // Set SplitterDistance in Shown event — the form is fully rendered and has valid dimensions.
-            // Load can still fire before layout is complete on some systems.
+            // Set min sizes and splitter distances AFTER the form is fully shown and has
+            // valid dimensions.  Setting these in the initializer or even in Load triggers
+            // ApplyPanel*MinSize → SplitterDistance adjustment on a zero-width control.
             this.Shown += (s, e) =>
             {
                 try
                 {
-                    // Outer split: left panel = 250px, right panel = rest
-                    int outerMin = _outerSplit.Panel1MinSize + _outerSplit.Panel2MinSize + _outerSplit.SplitterWidth;
-                    if (_outerSplit.Width > outerMin)
+                    // Set min sizes first
+                    _outerSplit.Panel1MinSize = 200;
+                    _outerSplit.Panel2MinSize = 400;
+
+                    // Then set splitter distance with validation
+                    if (_outerSplit.Width > 600)
                     {
-                        int desired = Math.Min(250, _outerSplit.Width - _outerSplit.Panel2MinSize - _outerSplit.SplitterWidth);
-                        _outerSplit.SplitterDistance = Math.Max(_outerSplit.Panel1MinSize, desired);
+                        _outerSplit.SplitterDistance = 250;
                     }
 
-                    // Inner split: right panel = 250px, viewport = rest
-                    // Parent (_outerSplit.Panel2) must already have valid width from the outer split above.
-                    int innerMin = _innerSplit.Panel1MinSize + _innerSplit.Panel2MinSize + _innerSplit.SplitterWidth;
-                    if (_innerSplit.Width > innerMin)
+                    // Inner split: set min sizes then splitter distance
+                    _innerSplit.Panel2MinSize = 200;
+
+                    if (_innerSplit.Width > 450)
                     {
-                        int rightPanelWidth = Math.Min(250, _innerSplit.Width - _innerSplit.Panel1MinSize - _innerSplit.SplitterWidth);
-                        int desired = _innerSplit.Width - rightPanelWidth - _innerSplit.SplitterWidth;
-                        _innerSplit.SplitterDistance = Math.Max(_innerSplit.Panel1MinSize, desired);
+                        _innerSplit.SplitterDistance = _innerSplit.Width - 250;
                     }
                 }
                 catch (InvalidOperationException)
