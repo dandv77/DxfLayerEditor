@@ -836,9 +836,12 @@ namespace DxfLayerEditor
         {
             var item = new ToolStripMenuItem(text)
             {
-                ShortcutKeys = shortcut != Keys.None ? shortcut : Keys.None,
                 ForeColor = Color.FromArgb(220, 220, 220)
             };
+            if (shortcut != Keys.None)
+            {
+                item.ShortcutKeys = shortcut;
+            }
             item.Click += handler;
             return item;
         }
