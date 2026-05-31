@@ -136,7 +136,7 @@ namespace DxfLayerEditor
                 _menuRedo,
                 new ToolStripSeparator(),
                 CreateMenuItem("Select &All", Keys.Control | Keys.A, (s, e) => SelectAll()),
-                CreateMenuItem("&Deselect", Keys.Escape, (s, e) => _state.ClearSelection())
+                CreateMenuItem("&Deselect", Keys.None, (s, e) => _state.ClearSelection(), "Esc")
             });
 
             // ── View ──
@@ -164,13 +164,13 @@ namespace DxfLayerEditor
             var toolsMenu = CreateMenu("&Tools");
             toolsMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
-                CreateMenuItem("&Select", Keys.S, (s, e) => _state.SetTool(ToolMode.Select)),
-                CreateMenuItem("&Move", Keys.M, (s, e) => _state.SetTool(ToolMode.Move)),
-                CreateMenuItem("&Trim", Keys.T, (s, e) => ExecuteTrim()),
-                CreateMenuItem("S&nap", Keys.N, (s, e) => _state.SetTool(ToolMode.Snap)),
-                CreateMenuItem("&Point → Circle", Keys.P, (s, e) => _state.SetTool(ToolMode.PointToCircle)),
+                CreateMenuItem("&Select", Keys.None, (s, e) => _state.SetTool(ToolMode.Select), "S"),
+                CreateMenuItem("&Move", Keys.None, (s, e) => _state.SetTool(ToolMode.Move), "M"),
+                CreateMenuItem("&Trim", Keys.None, (s, e) => ExecuteTrim(), "T"),
+                CreateMenuItem("S&nap", Keys.None, (s, e) => _state.SetTool(ToolMode.Snap), "N"),
+                CreateMenuItem("&Point → Circle", Keys.None, (s, e) => _state.SetTool(ToolMode.PointToCircle), "P"),
                 new ToolStripSeparator(),
-                CreateMenuItem("Grow to &Chain", Keys.G, (s, e) => _state.GrowSelectionToChains()),
+                CreateMenuItem("Grow to &Chain", Keys.None, (s, e) => _state.GrowSelectionToChains(), "G"),
             });
 
             // ── Help ──
@@ -447,6 +447,30 @@ namespace DxfLayerEditor
                         break;
                     case Keys.Delete:
                         _state.UnassignSelection();
+                        e.Handled = true;
+                        break;
+                    case Keys.S:
+                        _state.SetTool(ToolMode.Select);
+                        e.Handled = true;
+                        break;
+                    case Keys.M:
+                        _state.SetTool(ToolMode.Move);
+                        e.Handled = true;
+                        break;
+                    case Keys.T:
+                        ExecuteTrim();
+                        e.Handled = true;
+                        break;
+                    case Keys.N:
+                        _state.SetTool(ToolMode.Snap);
+                        e.Handled = true;
+                        break;
+                    case Keys.P:
+                        _state.SetTool(ToolMode.PointToCircle);
+                        e.Handled = true;
+                        break;
+                    case Keys.G:
+                        _state.GrowSelectionToChains();
                         e.Handled = true;
                         break;
                 }
@@ -832,7 +856,7 @@ namespace DxfLayerEditor
             return menu;
         }
 
-        private ToolStripMenuItem CreateMenuItem(string text, Keys shortcut, EventHandler handler)
+        private ToolStripMenuItem CreateMenuItem(string text, Keys shortcut, EventHandler handler, string? shortcutDisplayText = null)
         {
             var item = new ToolStripMenuItem(text)
             {
@@ -841,6 +865,10 @@ namespace DxfLayerEditor
             if (shortcut != Keys.None)
             {
                 item.ShortcutKeys = shortcut;
+            }
+            if (shortcutDisplayText != null)
+            {
+                item.ShortcutKeyDisplayString = shortcutDisplayText;
             }
             item.Click += handler;
             return item;
