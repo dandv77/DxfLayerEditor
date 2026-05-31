@@ -10,13 +10,13 @@ namespace DxfLayerEditor.Utilities
     public class ViewportTransform
     {
         /// <summary>Current zoom scale factor (pixels per world unit).</summary>
-        public double Scale { get; private set; } = 1.0;
+        public double Scale { get; set; } = 1.0;
 
         /// <summary>Pan offset in screen coordinates (pixels).</summary>
-        public double OffsetX { get; private set; } = 0.0;
+        public double OffsetX { get; set; } = 0.0;
 
         /// <summary>Pan offset in screen coordinates (pixels).</summary>
-        public double OffsetY { get; private set; } = 0.0;
+        public double OffsetY { get; set; } = 0.0;
 
         /// <summary>Width of the viewport in pixels.</summary>
         public double ViewportWidth { get; set; } = 800;

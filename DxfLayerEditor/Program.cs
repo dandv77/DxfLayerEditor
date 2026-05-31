@@ -12,8 +12,7 @@ namespace DxfLayerEditor
         static void Main()
         {
             ApplicationConfiguration.Initialize();
-            // TODO: Launch main form when UI is implemented
-            // Application.Run(new MainForm());
+            Application.Run(new MainForm());
         }
     }
 }
