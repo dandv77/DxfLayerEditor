@@ -326,8 +326,33 @@ namespace DxfLayerEditor.Controls
                 return;
             }
 
-            _state.AddNewLayer(name, 7);
+            // Check if layer with this name already exists
+            var existingLayer = _state.NewLayers.FirstOrDefault(
+                l => l.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+            if (existingLayer != null)
+            {
+                // Layer exists — assign selected entities to it
+                if (_state.SelectedIds.Count > 0)
+                {
+                    _state.AssignSelectionToLayer(existingLayer.Id);
+                }
+                else
+                {
+                    _lblBuilderError.Text = "Layer exists. Select entities to assign.";
+                }
+                return;
+            }
+
+            // Create the new layer
+            var newLayer = _state.AddNewLayer(name, 7);
             _txtLayerSuffix.Clear();
+
+            // If entities are selected, auto-assign them to the new layer
+            if (_state.SelectedIds.Count > 0)
+            {
+                _state.AssignSelectionToLayer(newLayer.Id);
+            }
         }
 
         private void BtnAssign_Click(object? sender, EventArgs e)
@@ -480,34 +505,44 @@ namespace DxfLayerEditor.Controls
 
         private Button CreateButton(string text, int topMargin)
         {
-            return new Button
+            var btn = new Button
             {
                 Text = text,
                 Dock = DockStyle.Bottom,
                 Height = 26,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(55, 55, 58),
-                ForeColor = Color.FromArgb(220, 220, 220),
+                BackColor = Color.FromArgb(65, 65, 70),
+                ForeColor = Color.White,
                 Font = new Font("Segoe UI", 8.5f),
                 Margin = new Padding(0, topMargin, 0, 2),
                 Cursor = Cursors.Hand
             };
+            btn.FlatAppearance.BorderColor = Color.FromArgb(100, 100, 105);
+            btn.FlatAppearance.BorderSize = 1;
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(80, 80, 85);
+            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(45, 45, 48);
+            return btn;
         }
 
         private Button CreateSmallButton(string text)
         {
-            return new Button
+            var btn = new Button
             {
                 Text = text,
                 Width = 72,
                 Height = 24,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(55, 55, 58),
-                ForeColor = Color.FromArgb(220, 220, 220),
+                BackColor = Color.FromArgb(65, 65, 70),
+                ForeColor = Color.White,
                 Font = new Font("Segoe UI", 7.5f),
                 Margin = new Padding(2, 2, 2, 2),
                 Cursor = Cursors.Hand
             };
+            btn.FlatAppearance.BorderColor = Color.FromArgb(100, 100, 105);
+            btn.FlatAppearance.BorderSize = 1;
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(80, 80, 85);
+            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(45, 45, 48);
+            return btn;
         }
 
         #endregion

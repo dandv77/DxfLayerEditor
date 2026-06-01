@@ -87,5 +87,71 @@ namespace DxfLayerEditor.Tests
 
             Assert.True(Math.Abs(worldDist - 10) < Tol);
         }
+
+        [Fact]
+        public void Zoom_PreservesPivotPoint()
+        {
+            var vt = new ViewportTransform(800, 600);
+            vt.FitToBounds(0, 0, 100, 100, 0);
+
+            // Pick a screen point (e.g., the center)
+            double pivotSX = 400, pivotSY = 300;
+
+            // Get world point at pivot before zoom
+            var worldPivot = vt.ScreenToWorld(new Point2D(pivotSX, pivotSY));
+
+            // Zoom in 2x at pivot
+            vt.Zoom(2.0, pivotSX, pivotSY);
+
+            // World point should still map to same screen position
+            var afterScreen = vt.WorldToScreen(worldPivot);
+            Assert.True(Math.Abs(afterScreen.X - pivotSX) < Tol,
+                $"X: expected {pivotSX}, got {afterScreen.X}");
+            Assert.True(Math.Abs(afterScreen.Y - pivotSY) < Tol,
+                $"Y: expected {pivotSY}, got {afterScreen.Y}");
+        }
+
+        [Fact]
+        public void Zoom_PreservesPivotPoint_OffCenter()
+        {
+            var vt = new ViewportTransform(800, 600);
+            vt.FitToBounds(-20, -10, 80, 50, 0.05);
+
+            // Pick an off-center screen point
+            double pivotSX = 200, pivotSY = 150;
+
+            var worldPivot = vt.ScreenToWorld(new Point2D(pivotSX, pivotSY));
+
+            // Zoom out 0.5x at pivot
+            vt.Zoom(0.5, pivotSX, pivotSY);
+
+            var afterScreen = vt.WorldToScreen(worldPivot);
+            Assert.True(Math.Abs(afterScreen.X - pivotSX) < Tol,
+                $"X: expected {pivotSX}, got {afterScreen.X}");
+            Assert.True(Math.Abs(afterScreen.Y - pivotSY) < Tol,
+                $"Y: expected {pivotSY}, got {afterScreen.Y}");
+        }
+
+        [Fact]
+        public void Zoom_MultipleSteps_PreservesPivot()
+        {
+            var vt = new ViewportTransform(1024, 768);
+            vt.FitToBounds(0, 0, 50, 30, 0.08);
+
+            double pivotSX = 600, pivotSY = 400;
+            var worldPivot = vt.ScreenToWorld(new Point2D(pivotSX, pivotSY));
+
+            // Simulate 10 scroll-zoom steps
+            for (int i = 0; i < 10; i++)
+            {
+                vt.Zoom(1.15, pivotSX, pivotSY);
+            }
+
+            var afterScreen = vt.WorldToScreen(worldPivot);
+            Assert.True(Math.Abs(afterScreen.X - pivotSX) < 0.01,
+                $"X after 10 zooms: expected {pivotSX}, got {afterScreen.X}");
+            Assert.True(Math.Abs(afterScreen.Y - pivotSY) < 0.01,
+                $"Y after 10 zooms: expected {pivotSY}, got {afterScreen.Y}");
+        }
     }
 }

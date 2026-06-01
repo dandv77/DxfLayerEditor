@@ -423,12 +423,16 @@ namespace DxfLayerEditor.Controls
                 Width = 140,
                 Height = 28,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(55, 55, 58),
-                ForeColor = Color.FromArgb(220, 220, 220),
+                BackColor = Color.FromArgb(65, 65, 70),
+                ForeColor = Color.White,
                 Font = new Font("Segoe UI", 8.5f),
                 Margin = new Padding(0, 4, 0, 0),
                 Cursor = Cursors.Hand
             };
+            _btnConvertP2C.FlatAppearance.BorderColor = Color.FromArgb(100, 100, 105);
+            _btnConvertP2C.FlatAppearance.BorderSize = 1;
+            _btnConvertP2C.FlatAppearance.MouseOverBackColor = Color.FromArgb(80, 80, 85);
+            _btnConvertP2C.FlatAppearance.MouseDownBackColor = Color.FromArgb(45, 45, 48);
             _btnConvertP2C.Click += BtnConvertP2C_Click;
 
             layout.Controls.AddRange(new Control[] { lbl, _txtDiameter, _btnConvertP2C });

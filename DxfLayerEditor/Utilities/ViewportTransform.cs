@@ -116,8 +116,11 @@ namespace DxfLayerEditor.Utilities
         /// <param name="worldPoint">The point to center on.</param>
         public void CenterOn(Point2D worldPoint)
         {
+            // WorldToScreen(worldPoint) should equal (VP_W/2, VP_H/2):
+            //   sx = wx*S + Ox  =>  Ox = VP_W/2 - wx*S
+            //   sy = H - (wy*S + Oy) = H/2  =>  Oy = H/2 - wy*S
             OffsetX = ViewportWidth / 2.0 - worldPoint.X * Scale;
-            OffsetY = worldPoint.Y * Scale - ViewportHeight / 2.0 + ViewportHeight;
+            OffsetY = ViewportHeight / 2.0 - worldPoint.Y * Scale;
         }
 
         #endregion
@@ -141,20 +144,12 @@ namespace DxfLayerEditor.Utilities
 
             Scale = newScale;
 
-            // Recompute offset so worldPivot maps back to the same screen position
+            // Recompute offset so worldPivot maps back to the same screen position.
+            // From WorldToScreen:
+            //   sx = wx * Scale + OffsetX   =>  OffsetX = sx - wx * Scale
+            //   sy = H - (wy * Scale + OffsetY)  =>  OffsetY = H - sy - wy * Scale
             OffsetX = screenPivotX - worldPivot.X * Scale;
-            OffsetY = (ViewportHeight - screenPivotY) - worldPivot.Y * Scale + ViewportHeight - (ViewportHeight - screenPivotY);
-            // Simplified:
-            OffsetX = screenPivotX - worldPivot.X * Scale;
-            OffsetY = worldPivot.Y * Scale - (ViewportHeight - screenPivotY) + ViewportHeight - (ViewportHeight - screenPivotY);
-
-            // Correct formula preserving pivot invariant:
-            // WorldToScreen(worldPivot) should equal (screenPivotX, screenPivotY)
-            // sx = wx * Scale + OffsetX  =>  OffsetX = sx - wx * Scale
-            // sy = H - (wy * Scale + OffsetY)  =>  OffsetY = wy * Scale - (H - sy)
-            //    = wy * Scale - H + sy
-            OffsetX = screenPivotX - worldPivot.X * Scale;
-            OffsetY = worldPivot.Y * Scale - ViewportHeight + screenPivotY;
+            OffsetY = ViewportHeight - screenPivotY - worldPivot.Y * Scale;
         }
 
         /// <summary>
@@ -206,17 +201,15 @@ namespace DxfLayerEditor.Utilities
             Scale = Math.Min(scaleX, scaleY);
             Scale = Math.Clamp(Scale, MinScale, MaxScale);
 
-            // Center the bounding box
+            // Center the bounding box.
+            // WorldToScreen(center) should equal (VP_W/2, VP_H/2):
+            //   sx = cx*S + Ox  =>  Ox = VP_W/2 - cx*S
+            //   sy = H - (cy*S + Oy) = H/2  =>  Oy = H/2 - cy*S
             double centerX = (minX + maxX) / 2.0;
             double centerY = (minY + maxY) / 2.0;
 
             OffsetX = ViewportWidth / 2.0 - centerX * Scale;
-            OffsetY = centerY * Scale - ViewportHeight / 2.0 + ViewportHeight;
-            // Correction: we need WorldToScreen(center) = (VP/2, VP/2)
-            // sx = cx * S + Ox => Ox = VPw/2 - cx*S
-            // sy = H - (cy * S + Oy) => Oy = cy*S - H + H/2 = cy*S - H/2
-            OffsetX = ViewportWidth / 2.0 - centerX * Scale;
-            OffsetY = centerY * Scale - ViewportHeight / 2.0;
+            OffsetY = ViewportHeight / 2.0 - centerY * Scale;
         }
 
         /// <summary>

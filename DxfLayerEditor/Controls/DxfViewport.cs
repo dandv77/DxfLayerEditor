@@ -500,11 +500,9 @@ namespace DxfLayerEditor.Controls
 
             var adjustedPos = new Point(e.X - RulerSize, e.Y);
 
-            if (e.Button == MouseButtons.Middle ||
-                (e.Button == MouseButtons.Left && ModifierKeys.HasFlag(Keys.Control) &&
-                 _state?.ActiveTool == ToolMode.Select))
+            if (e.Button == MouseButtons.Middle)
             {
-                // Start pan
+                // Start pan (middle-click only — Ctrl+click is used for toggle selection)
                 _isPanning = true;
                 _panStart = e.Location;
                 _panStartOffsetX = _transform.OffsetX;
@@ -606,10 +604,17 @@ namespace DxfLayerEditor.Controls
         {
             base.OnMouseWheel(e);
 
+            // Sync viewport dimensions before computing zoom
+            _transform.ViewportWidth = Width - RulerSize;
+            _transform.ViewportHeight = Height - RulerSize;
+
             double factor = e.Delta > 0 ? 1.15 : 1 / 1.15;
             _transform.Zoom(factor, e.X - RulerSize, e.Y);
             ZoomChanged?.Invoke(this, _transform.Scale);
+
+            // Use Invalidate + Update for immediate, flicker-free repaint
             Invalidate();
+            Update();
         }
 
         protected override void OnMouseDoubleClick(MouseEventArgs e)
