@@ -69,7 +69,6 @@ namespace DxfLayerEditor.Services
                 foreach (var dxfEntity in doc.Entities.Ellipses)
                 {
                     entities.Add(ConvertEllipse(dxfEntity));
-                    // Note: Ellipses are stored as PolylineEntity approximations
                 }
 
                 // Track skipped types
@@ -84,9 +83,18 @@ namespace DxfLayerEditor.Services
                     }
                 }
 
-                // TEXT and MTEXT — store as skipped for now (explode via dialog)
                 if (doc.Entities.Texts.Count() > 0) skippedTypes.Add("TEXT");
                 if (doc.Entities.MTexts.Count() > 0) skippedTypes.Add("MTEXT");
+            }
+            catch (Exception ex) when (
+                ex.GetType().Name.Contains("Version", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("version", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("Unknown", StringComparison.OrdinalIgnoreCase))
+            {
+                // netDxf throws DxfVersionNotSupportedException for minimal/legacy DXF files
+                // that lack a HEADER section (no $ACADVER variable).
+                // Fall back to our own text-based DXF parser.
+                return LoadDxfFallback(filePath);
             }
             catch (Exception ex)
             {
@@ -95,6 +103,165 @@ namespace DxfLayerEditor.Services
 
             return (entities, layers, skippedTypes.ToList());
         }
+
+        /// <summary>
+        /// Fallback DXF parser for minimal/legacy DXF files that lack a HEADER section
+        /// (no $ACADVER), which netDxf rejects as "version not supported: Unknown".
+        /// Parses LINE, ARC, CIRCLE, POINT entities from the ENTITIES section directly.
+        /// </summary>
+        private (List<EntityBase> Entities, List<Layer> Layers, List<string> SkippedTypes) LoadDxfFallback(string filePath)
+        {
+            var entities = new List<EntityBase>();
+            var layerSet = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var skippedTypes = new HashSet<string>();
+
+            string[] lines = File.ReadAllLines(filePath);
+            int i = 0;
+
+            // Advance to ENTITIES section
+            while (i < lines.Length - 1)
+            {
+                if (lines[i].Trim() == "2" && lines[i + 1].Trim().Equals("ENTITIES", StringComparison.OrdinalIgnoreCase))
+                {
+                    i += 2;
+                    break;
+                }
+                i++;
+            }
+
+            // Parse entities
+            while (i < lines.Length)
+            {
+                string code = lines[i].Trim();
+                if (i + 1 >= lines.Length) break;
+                string value = lines[i + 1].Trim();
+
+                if (code == "0")
+                {
+                    if (value.Equals("ENDSEC", StringComparison.OrdinalIgnoreCase) ||
+                        value.Equals("EOF", StringComparison.OrdinalIgnoreCase))
+                        break;
+
+                    string entityType = value.ToUpperInvariant();
+                    i += 2;
+
+                    // Collect all group codes for this entity until next group-code 0
+                    var groups = new List<(int Code, string Value)>();
+                    while (i < lines.Length - 1)
+                    {
+                        string gc = lines[i].Trim();
+                        if (!int.TryParse(gc, out int groupCode)) { i++; continue; }
+                        string gv = lines[i + 1].Trim();
+                        if (groupCode == 0) break; // next entity
+                        groups.Add((groupCode, gv));
+                        i += 2;
+                    }
+
+                    string layerName = "0";
+                    int color = 7; // default white
+
+                    foreach (var g in groups)
+                    {
+                        if (g.Code == 8) layerName = g.Value;
+                        if (g.Code == 62 && int.TryParse(g.Value, out int c)) color = c;
+                    }
+
+                    // Track layer
+                    if (!layerSet.ContainsKey(layerName))
+                        layerSet[layerName] = color;
+
+                    EntityBase? entity = entityType switch
+                    {
+                        "LINE" => ParseLine(groups, layerName, color),
+                        "ARC" => ParseArc(groups, layerName, color),
+                        "CIRCLE" => ParseCircle(groups, layerName, color),
+                        "POINT" => ParsePoint(groups, layerName, color),
+                        _ => null
+                    };
+
+                    if (entity != null)
+                        entities.Add(entity);
+                    else if (entityType != "LINE" && entityType != "ARC" &&
+                             entityType != "CIRCLE" && entityType != "POINT")
+                        skippedTypes.Add(entityType);
+                }
+                else
+                {
+                    i += 2;
+                }
+            }
+
+            var layers = new List<Layer>();
+            foreach (var kvp in layerSet)
+            {
+                layers.Add(new Layer
+                {
+                    Name = kvp.Key,
+                    Color = Math.Abs(kvp.Value),
+                    IsVisible = true
+                });
+            }
+
+            return (entities, layers, skippedTypes.ToList());
+        }
+
+        #region Fallback Entity Parsers
+
+        private static double GetDouble(List<(int Code, string Value)> groups, int code, double defaultVal = 0)
+        {
+            foreach (var g in groups)
+                if (g.Code == code && double.TryParse(g.Value, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double v))
+                    return v;
+            return defaultVal;
+        }
+
+        private static LineEntity ParseLine(List<(int Code, string Value)> groups, string layer, int color)
+        {
+            return new LineEntity(
+                new Point2D(GetDouble(groups, 10), GetDouble(groups, 20)),
+                new Point2D(GetDouble(groups, 11), GetDouble(groups, 21)))
+            {
+                Layer = layer,
+                Color = color
+            };
+        }
+
+        private static ArcEntity ParseArc(List<(int Code, string Value)> groups, string layer, int color)
+        {
+            return new ArcEntity(
+                new Point2D(GetDouble(groups, 10), GetDouble(groups, 20)),
+                GetDouble(groups, 40),
+                GetDouble(groups, 50),
+                GetDouble(groups, 51))
+            {
+                Layer = layer,
+                Color = color
+            };
+        }
+
+        private static CircleEntity ParseCircle(List<(int Code, string Value)> groups, string layer, int color)
+        {
+            return new CircleEntity(
+                new Point2D(GetDouble(groups, 10), GetDouble(groups, 20)),
+                GetDouble(groups, 40))
+            {
+                Layer = layer,
+                Color = color
+            };
+        }
+
+        private static PointEntity ParsePoint(List<(int Code, string Value)> groups, string layer, int color)
+        {
+            return new PointEntity(
+                new Point2D(GetDouble(groups, 10), GetDouble(groups, 20)))
+            {
+                Layer = layer,
+                Color = color
+            };
+        }
+
+        #endregion
 
         /// <summary>
         /// Exports entities to a new DXF file with the given layer assignments.

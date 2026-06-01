@@ -86,6 +86,7 @@ namespace DxfLayerEditor.Controls
                 ControlStyles.ResizeRedraw,
                 true);
 
+            Dock = DockStyle.Fill;
             BackColor = _backgroundColor;
             Cursor = Cursors.Cross;
         }
